@@ -9,14 +9,29 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="app">
       <aside className="sidebar">
-        <a className="brand" href="#home" onClick={() => setView("home")}>
+        <a
+          className="brand"
+          href="#home"
+          onClick={(e) => {
+            e.preventDefault();
+            setView("home");
+          }}
+        >
           <div className="brand-mark">
             <span />
           </div>
-          <h1>로또랩</h1>
-          <p>통계로 검토하는 번호 생성</p>
+          <div>
+            <h1>로또랩</h1>
+            <p>통계로 검토하는 번호 생성</p>
+          </div>
         </a>
-        <nav className="nav">
+        <div className="header-status">
+          <span
+            className={`status-dot ${status.refreshState === "error" ? "error" : status.refreshState === "loading" ? "loading" : ""}`}
+          />
+          {status.latestDrawNo}회
+        </div>
+        <nav className="nav nav-side">
           {VIEWS.map((item) => (
             <button
               key={item.id}
@@ -61,6 +76,17 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
         {children}
       </main>
+      <nav className="nav-bottom" aria-label="주요 메뉴">
+        {VIEWS.map((item) => (
+          <button
+            key={item.id}
+            className={view === item.id ? "active" : ""}
+            onClick={() => setView(item.id)}
+          >
+            {item.short}
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }

@@ -72,12 +72,12 @@ export interface DataStatus {
   refreshMessage: string;
 }
 
-export const VIEWS: { id: View; label: string; hint: string }[] = [
-  { id: "home", label: "대시보드", hint: "최신 회차와 데이터 상태" },
-  { id: "analysis", label: "통계 분석", hint: "빈도 · 추세 · 분포" },
-  { id: "generate", label: "번호 생성", hint: "기준을 반영한 원클릭 조합" },
-  { id: "saved", label: "저장 · 비교", hint: "당첨 결과와 일치 확인" },
-  { id: "alerts", label: "구매 알림", hint: "다음 추첨 전 검토 알림" },
+export const VIEWS: { id: View; label: string; short: string; hint: string }[] = [
+  { id: "home", label: "대시보드", short: "홈", hint: "최신 회차와 데이터 상태" },
+  { id: "analysis", label: "통계 분석", short: "통계", hint: "빈도 · 추세 · 분포" },
+  { id: "generate", label: "번호 생성", short: "생성", hint: "기준을 반영한 원클릭 조합" },
+  { id: "saved", label: "저장 · 비교", short: "저장", hint: "당첨 결과와 일치 확인" },
+  { id: "alerts", label: "구매 알림", short: "알림", hint: "다음 추첨 전 검토 알림" },
 ];
 
 export const STRATEGIES: {

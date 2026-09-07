@@ -76,11 +76,11 @@ export function AlertsPage() {
           </div>
           <div className="btn-row" style={{ marginTop: 16 }}>
             {alerts.enabled ? (
-              <button className="btn" onClick={() => updateAlerts({ enabled: false })}>
+              <button className="btn btn-wide" onClick={() => updateAlerts({ enabled: false })}>
                 알림 해제
               </button>
             ) : (
-              <button className="btn primary" onClick={() => void enable()}>
+              <button className="btn primary btn-wide" onClick={() => void enable()}>
                 알림 설정
               </button>
             )}

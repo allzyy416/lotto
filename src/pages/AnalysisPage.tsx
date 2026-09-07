@@ -37,7 +37,7 @@ export function AnalysisPage() {
             다시 계산됩니다. 두 지표 모두 다음 회차를 맞히지 않습니다.
           </p>
         </div>
-        <div className="btn-row">
+        <div className="btn-row page-actions">
           <button className={`btn ${!recentOnly ? "primary" : ""}`} onClick={() => setRecentOnly(false)}>
             전체 {draws.length}회
           </button>
@@ -121,10 +121,10 @@ export function AnalysisPage() {
             <thead>
               <tr>
                 <th>회차</th>
-                <th>날짜</th>
+                <th className="hide-sm">날짜</th>
                 <th>번호</th>
-                <th>홀짝</th>
-                <th>저고</th>
+                <th className="hide-sm">홀짝</th>
+                <th className="hide-sm">저고</th>
                 <th>합계</th>
               </tr>
             </thead>
@@ -136,12 +136,12 @@ export function AnalysisPage() {
                 return (
                   <tr key={draw.drawNo}>
                     <td className="mono">{draw.drawNo}</td>
-                    <td>{formatDate(draw.date)}</td>
-                    <td className="mono">{draw.numbers.join("  ")}</td>
-                    <td>
+                    <td className="hide-sm">{formatDate(draw.date)}</td>
+                    <td className="mono nowrap">{draw.numbers.join("  ")}</td>
+                    <td className="hide-sm">
                       {odd}:{6 - odd}
                     </td>
-                    <td>
+                    <td className="hide-sm">
                       {low}:{6 - low}
                     </td>
                     <td className="mono">{sum}</td>

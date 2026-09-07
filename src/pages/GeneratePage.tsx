@@ -75,7 +75,7 @@ export function GeneratePage() {
               ))}
             </div>
           </div>
-          <button className="btn primary" onClick={run} disabled={!disclaimerAccepted}>
+          <button className="btn primary btn-wide" onClick={run} disabled={!disclaimerAccepted}>
             번호 {gameCount}게임 생성
           </button>
         </div>
@@ -165,7 +165,7 @@ export function GeneratePage() {
                     구간 <b>{BANDS.map((b, i) => `${b.label} ${a.bands[i]}`).join(" / ")}</b>
                   </span>
                 </div>
-                <div className="btn-row">
+                <div className="chip-row">
                   {a.profiles.map((p) => (
                     <span key={p.n} className={`chip ${p.tag}`}>
                       <Ball n={p.n} size="sm" />

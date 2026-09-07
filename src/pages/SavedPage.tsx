@@ -49,7 +49,7 @@ export function SavedPage() {
             대조해 볼 수 있습니다.
           </p>
         </div>
-        <button className="btn primary" onClick={() => setView("generate")}>
+        <button className="btn primary btn-wide" onClick={() => setView("generate")}>
           새 조합 만들기
         </button>
       </div>
@@ -81,7 +81,7 @@ export function SavedPage() {
         </section>
       </div>
 
-      <div className="btn-row" style={{ margin: "16px 0" }}>
+      <div className="btn-row filter-row" style={{ margin: "16px 0" }}>
         {(
           [
             ["all", "전체"],

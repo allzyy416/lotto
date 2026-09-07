@@ -1,0 +1,25 @@
+---
+description: Always push completed work to GitHub and give EC2 deploy commands
+alwaysApply: true
+---
+
+# Deploy after changes
+
+When implementation is done, do not wait to be asked:
+
+1. Commit the relevant files (no secrets, no `node_modules` / `dist`).
+2. Push to `origin` on the current branch.
+3. End the reply with the EC2 update commands below.
+
+```bash
+cd ~/lotto
+git pull
+npm ci
+npm run build
+sudo rsync -a --delete dist/ /var/www/lottolab/
+sudo chown -R www-data:www-data /var/www/lottolab
+sudo systemctl reload nginx
+```
+
+Remote: `https://github.com/allzyy416/lotto`  
+Live site: `https://al.allzyy.com`

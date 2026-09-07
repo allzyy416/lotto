@@ -24,7 +24,7 @@ export function HomePage() {
             결과와 전형적인 분포만 먼저 살펴보세요.
           </p>
         </div>
-        <div className="btn-row">
+        <div className="btn-row page-actions">
           <button className="btn" onClick={() => void refresh()} disabled={status.refreshState === "loading"}>
             {status.refreshState === "loading" ? "확인 중…" : "최신 회차 확인"}
           </button>
@@ -121,18 +121,18 @@ export function HomePage() {
             <thead>
               <tr>
                 <th>회차</th>
-                <th>추첨일</th>
+                <th className="hide-sm">추첨일</th>
                 <th>당첨 번호</th>
-                <th>1등</th>
+                <th className="hide-sm">1등</th>
               </tr>
             </thead>
             <tbody>
               {[...draws].reverse().slice(0, 8).map((draw) => (
                 <tr key={draw.drawNo}>
                   <td className="mono">{draw.drawNo}</td>
-                  <td>{formatDate(draw.date)}</td>
+                  <td className="hide-sm">{formatDate(draw.date)}</td>
                   <td>
-                    <div className="balls">
+                    <div className="balls compact">
                       {draw.numbers.map((n) => (
                         <span key={n} className="mono">
                           {n}
@@ -142,7 +142,7 @@ export function HomePage() {
                       <span className="mono">{draw.bonus}</span>
                     </div>
                   </td>
-                  <td>
+                  <td className="hide-sm">
                     {formatCount(draw.firstWinners)} · {formatWon(draw.firstPrize)}
                   </td>
                 </tr>

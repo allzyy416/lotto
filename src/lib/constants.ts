@@ -23,7 +23,9 @@ export const RANK_LABEL: Record<number, string> = {
 
 export const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
-export const OFFICIAL_RESULT_URL = "https://www.dhlottery.co.kr/gameResult.do?method=byWin";
+export const OFFICIAL_RESULT_URL = "https://www.dhlottery.co.kr/lt645/result";
+export const officialResultUrl = (drawNo?: number) =>
+  drawNo ? `${OFFICIAL_RESULT_URL}?drwNo=${drawNo}` : OFFICIAL_RESULT_URL;
 export const DATA_LATEST_URL = "https://smok95.github.io/lotto/results/latest.json";
 export const DATA_ROUND_URL = (n: number) => `https://smok95.github.io/lotto/results/${n}.json`;
 

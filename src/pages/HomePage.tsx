@@ -1,5 +1,5 @@
 import { BallRow } from "../components/Ball";
-import { OFFICIAL_RESULT_URL } from "../lib/constants";
+import { officialResultUrl } from "../lib/constants";
 import { useApp } from "../lib/context";
 import { addDays, formatCount, formatDate, formatWon } from "../lib/format";
 import { distribution, latestDraw, numberProfiles } from "../lib/stats";
@@ -56,7 +56,7 @@ export function HomePage() {
             <span>
               총 판매 <b>{formatWon(latest.sales)}</b>
             </span>
-            <a href={OFFICIAL_RESULT_URL} target="_blank" rel="noreferrer">
+            <a href={officialResultUrl(latest.drawNo)} target="_blank" rel="noreferrer">
               공식 결과 대조
             </a>
           </div>

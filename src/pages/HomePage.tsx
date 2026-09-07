@@ -34,8 +34,8 @@ export function HomePage() {
         </div>
       </div>
 
-      <div className="dash dash-top">
-        <section className="hero-draw card">
+      <div className="dash">
+        <section className="hero-draw card dash-latest">
           <div className="hero-meta">
             <div>
               <div className="kicker">Latest draw</div>
@@ -61,7 +61,7 @@ export function HomePage() {
             </a>
           </div>
         </section>
-        <section className="card">
+        <section className="card dash-status">
           <div className="kicker">Data status</div>
           <h3>데이터 반영 상태</h3>
           <p className="stat">
@@ -82,9 +82,7 @@ export function HomePage() {
             좋습니다.
           </p>
         </section>
-      </div>
-      <div className="dash dash-mid">
-        <section className="card">
+        <section className="card dash-recent">
           <div className="kicker">Recent 20</div>
           <h3>최근 추세 상위</h3>
           <BallRow numbers={hot.map((p) => p.n)} />
@@ -92,7 +90,7 @@ export function HomePage() {
             최근 20회에서 더 자주 보인 번호입니다. 향후 출현을 의미하지 않습니다.
           </p>
         </section>
-        <section className="card">
+        <section className="card dash-alltime">
           <div className="kicker">All-time</div>
           <h3>전체 빈도 상위</h3>
           <BallRow numbers={frequent.map((p) => p.n)} />
@@ -100,7 +98,7 @@ export function HomePage() {
             1회부터 누적 출현이 많은 번호입니다. 빈도와 최근 추세는 따로 봅니다.
           </p>
         </section>
-        <section className="card">
+        <section className="card dash-typical">
           <div className="kicker">Typical shape</div>
           <h3>과거 전형 분포</h3>
           <p className="stat">

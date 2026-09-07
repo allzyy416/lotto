@@ -10,6 +10,7 @@ import { STRATEGIES, type GeneratedCombo, type Strategy } from "../types";
 export function GeneratePage() {
   const { draws, disclaimerAccepted, acceptDisclaimer, saveCombo, saved, setView } = useApp();
   const [strategy, setStrategy] = useState<Strategy>("balanced");
+  const [gameCount, setGameCount] = useState(5);
   const [combos, setCombos] = useState<GeneratedCombo[]>([]);
   const [elapsed, setElapsed] = useState<number | null>(null);
   const nextDraw = latestDraw(draws).drawNo + 1;
@@ -17,7 +18,7 @@ export function GeneratePage() {
   const run = () => {
     if (!disclaimerAccepted) return;
     const started = performance.now();
-    const next = generateCombos(draws, strategy, 5);
+    const next = generateCombos(draws, strategy, gameCount);
     setElapsed(Math.max(1, Math.round(performance.now() - started)));
     setCombos(next);
   };
@@ -54,13 +55,30 @@ export function GeneratePage() {
           <div className="kicker">Generate</div>
           <h2>통계 기준 원클릭 생성</h2>
           <p>
-            한 번의 클릭으로 5게임을 만듭니다. 각 조합에는 적용된 기준과 번호별 빈도·추세 태그가 함께 표시됩니다.
+            원하는 게임 수만큼 한 번에 만듭니다. 각 조합에는 적용된 기준과 번호별 빈도·추세 태그가 함께 표시됩니다.
             대상 회차는 {nextDraw}회입니다.
           </p>
         </div>
-        <button className="btn primary" onClick={run} disabled={!disclaimerAccepted}>
-          번호 5게임 생성
-        </button>
+        <div className="generate-actions">
+          <div>
+            <div className="kicker">게임 수</div>
+            <div className="count-pick">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className={`btn ${gameCount === n ? "primary" : ""}`}
+                  onClick={() => setGameCount(n)}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button className="btn primary" onClick={run} disabled={!disclaimerAccepted}>
+            번호 {gameCount}게임 생성
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-2">

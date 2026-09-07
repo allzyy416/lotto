@@ -45,6 +45,7 @@ a { color: var(--gold-2); }
   display: grid;
   grid-template-columns: var(--sidebar) 1fr;
   min-height: 100vh;
+  align-content: start;
 }
 
 .sidebar {
@@ -132,6 +133,19 @@ a { color: var(--gold-2); }
   letter-spacing: -0.03em;
 }
 .page-head p { margin: 8px 0 0; color: var(--muted); max-width: 640px; }
+
+.generate-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.count-pick { display: flex; gap: 6px; }
+.count-pick .btn {
+  min-width: 40px;
+  padding: 8px 0;
+  border-radius: 10px;
+}
 
 .banner, .card, .panel {
   background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent 40%), var(--panel);
@@ -376,7 +390,19 @@ th { color: var(--dim); font-weight: 600; font-size: 12px; }
 @media (max-width: 1100px) {
   .grid-2, .grid-3, .grid-4, .grid-split { grid-template-columns: 1fr; }
   .app { grid-template-columns: 1fr; }
-  .sidebar { position: relative; height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+  .sidebar {
+    position: relative;
+    height: auto;
+    align-self: start;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    gap: 16px;
+    padding: 20px;
+  }
+  .sidebar-foot { margin-top: 0; }
   .nav { flex-direction: row; overflow: auto; }
   .nav button { min-width: 140px; }
+  .main { padding: 20px 20px 48px; }
+  .page-head { align-items: flex-start; }
+  .generate-actions { align-items: flex-start; }
 }

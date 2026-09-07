@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { AlertSettings, DataStatus, Draw, SavedCombo, View } from "../types";
+import type { AlertSettings, DataStatus, Draw, SavedCombo, TelegramSettings, View } from "../types";
 import { compareCombo } from "./compare";
 import { loadLocalDraws, refreshDraws, validateDraw } from "./data";
 import { latestDraw } from "./stats";
@@ -15,12 +15,15 @@ import {
   loadAlerts,
   loadDisclaimerAccepted,
   loadSaved,
+  loadTelegram,
   saveAlerts,
   saveDisclaimerAccepted,
   saveSaved,
+  saveTelegram,
   clearAllUserData,
 } from "./storage";
 import { reminderDue, showPurchaseReminder } from "./notifications";
+import { formatDrawResultMessage, formatPurchaseReminderMessage, sendTelegram, telegramReady } from "./telegram";
 import { weekKey } from "./format";
 
 interface AppState {
@@ -34,8 +37,11 @@ interface AppState {
   saved: SavedCombo[];
   saveCombo: (combo: Omit<SavedCombo, "targetDrawNo"> & { targetDrawNo?: number }) => void;
   removeSaved: (id: string) => void;
+  togglePurchased: (id: string, purchased: boolean) => void;
   alerts: AlertSettings;
   updateAlerts: (patch: Partial<AlertSettings>) => void;
+  telegram: TelegramSettings;
+  updateTelegram: (patch: Partial<TelegramSettings>) => void;
   reminderBanner: string | null;
   dismissReminder: () => void;
   clearLocalData: () => void;
@@ -72,6 +78,23 @@ function applyComparisons(items: SavedCombo[], draws: Draw[]): SavedCombo[] {
   });
 }
 
+async function dispatchDrawTelegram(draws: Draw[], saved: SavedCombo[]): Promise<TelegramSettings | null> {
+  const settings = loadTelegram();
+  if (!telegramReady(settings)) return null;
+  const latest = latestDraw(draws);
+  if (settings.lastResultDrawNo >= latest.drawNo) return null;
+  await sendTelegram(settings, formatDrawResultMessage(latest, saved));
+  const next = { ...settings, lastResultDrawNo: latest.drawNo };
+  saveTelegram(next);
+  return next;
+}
+
+async function dispatchPurchaseTelegram(nextDrawNo: number, saved: SavedCombo[]): Promise<void> {
+  const settings = loadTelegram();
+  if (!telegramReady(settings)) return;
+  await sendTelegram(settings, formatPurchaseReminderMessage(nextDrawNo, saved));
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [view, setView] = useState<View>("home");
   const [draws, setDraws] = useState<Draw[]>(() => loadLocalDraws());
@@ -79,6 +102,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(loadDisclaimerAccepted);
   const [saved, setSaved] = useState<SavedCombo[]>(() => applyComparisons(loadSaved(), loadLocalDraws()));
   const [alerts, setAlerts] = useState<AlertSettings>(loadAlerts);
+  const [telegram, setTelegram] = useState<TelegramSettings>(loadTelegram);
   const [reminderBanner, setReminderBanner] = useState<string | null>(null);
 
   useEffect(() => {
@@ -97,19 +121,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const { draws: next, added } = await refreshDraws(loadLocalDraws());
         if (cancelled) return;
         const checked = next.filter(validateDraw);
+        const updated = applyComparisons(loadSaved(), checked);
         setDraws(checked);
-        setSaved((items) => {
-          const updated = applyComparisons(items, checked);
-          saveSaved(updated);
-          return updated;
-        });
-        setStatus(
-          buildStatus(checked, {
-            refreshState: "ok",
-            refreshMessage:
-              added > 0 ? `${added}개 회차를 추가로 반영했습니다.` : "이미 최신 회차까지 반영되어 있습니다.",
-          }),
-        );
+        setSaved(updated);
+        saveSaved(updated);
+        if (added > 0) {
+          const sent = await dispatchDrawTelegram(checked, updated).catch(() => null);
+          if (sent && !cancelled) setTelegram(sent);
+        }
+        if (!cancelled) {
+          setStatus(
+            buildStatus(checked, {
+              refreshState: "ok",
+              refreshMessage:
+                added > 0 ? `${added}개 회차를 추가로 반영했습니다.` : "이미 최신 회차까지 반영되어 있습니다.",
+            }),
+          );
+        }
       } catch {
         if (cancelled) return;
         setStatus((s) => ({
@@ -127,11 +155,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!reminderDue(alerts)) return;
     const nextNo = latestDraw(draws).drawNo + 1;
+    const currentSaved = loadSaved();
     showPurchaseReminder(nextNo);
+    void dispatchPurchaseTelegram(nextNo, currentSaved).catch(() => undefined);
     const next = { ...alerts, lastNotifiedWeek: weekKey() };
     setAlerts(next);
     saveAlerts(next);
-    setReminderBanner(`${nextNo}회 추첨 전 번호를 검토할 시간입니다. 알림은 구매를 권유하지 않습니다.`);
+    const bought = currentSaved.filter((item) => item.purchased && item.targetDrawNo === nextNo).length;
+    setReminderBanner(
+      bought > 0
+        ? `${nextNo}회 구매로 표시한 번호 ${bought}게임을 텔레그램으로도 보냈습니다.`
+        : `${nextNo}회에 구매로 표시한 번호가 없습니다. 저장함에서 검토해 보세요.`,
+    );
   }, [alerts, draws]);
 
   const refresh = useCallback(async () => {
@@ -139,12 +174,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const { draws: next, added } = await refreshDraws(draws);
       const checked = next.filter(validateDraw);
+      const updated = applyComparisons(loadSaved(), checked);
       setDraws(checked);
-      setSaved((items) => {
-        const updated = applyComparisons(items, checked);
-        saveSaved(updated);
-        return updated;
-      });
+      setSaved(updated);
+      saveSaved(updated);
+      if (added > 0) {
+        const sent = await dispatchDrawTelegram(checked, updated).catch(() => null);
+        if (sent) setTelegram(sent);
+      }
       setStatus(
         buildStatus(checked, {
           refreshState: "ok",
@@ -170,7 +207,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSaved((items) => {
         if (items.some((x) => x.id === combo.id)) return items;
         const next: SavedCombo[] = applyComparisons(
-          [{ ...combo, targetDrawNo: combo.targetDrawNo ?? latestDraw(draws).drawNo + 1 }, ...items],
+          [
+            {
+              ...combo,
+              purchased: combo.purchased ?? false,
+              targetDrawNo: combo.targetDrawNo ?? latestDraw(draws).drawNo + 1,
+            },
+            ...items,
+          ],
           draws,
         );
         saveSaved(next);
@@ -188,10 +232,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const togglePurchased = useCallback((id: string, purchased: boolean) => {
+    setSaved((items) => {
+      const next = items.map((item) => (item.id === id ? { ...item, purchased } : item));
+      saveSaved(next);
+      return next;
+    });
+  }, []);
+
   const updateAlerts = useCallback((patch: Partial<AlertSettings>) => {
     setAlerts((current) => {
       const next = { ...current, ...patch };
       saveAlerts(next);
+      return next;
+    });
+  }, []);
+
+  const updateTelegram = useCallback((patch: Partial<TelegramSettings>) => {
+    setTelegram((current) => {
+      const next = { ...current, ...patch };
+      saveTelegram(next);
       return next;
     });
   }, []);
@@ -203,6 +263,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDisclaimerAccepted(false);
     setSaved([]);
     setAlerts(loadAlerts());
+    setTelegram(loadTelegram());
     setReminderBanner(null);
   }, []);
 
@@ -218,8 +279,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saved,
       saveCombo,
       removeSaved,
+      togglePurchased,
       alerts,
       updateAlerts,
+      telegram,
+      updateTelegram,
       reminderBanner,
       dismissReminder,
       clearLocalData,
@@ -234,8 +298,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saved,
       saveCombo,
       removeSaved,
+      togglePurchased,
       alerts,
       updateAlerts,
+      telegram,
+      updateTelegram,
       reminderBanner,
       dismissReminder,
       clearLocalData,

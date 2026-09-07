@@ -4,19 +4,69 @@ import { useApp } from "../lib/context";
 import { pad2 } from "../lib/format";
 import { requestNotifyPermission, scheduleLabel } from "../lib/notifications";
 import { latestDraw } from "../lib/stats";
+import { fetchChatId, maskToken, sendTelegram, telegramReady } from "../lib/telegram";
 
 export function AlertsPage() {
-  const { alerts, updateAlerts, clearLocalData, saved, disclaimerAccepted, draws } = useApp();
+  const {
+    alerts,
+    updateAlerts,
+    telegram,
+    updateTelegram,
+    clearLocalData,
+    saved,
+    disclaimerAccepted,
+    draws,
+  } = useApp();
   const [permission, setPermission] = useState(() =>
     "Notification" in window ? Notification.permission : "denied",
   );
+  const [tokenDraft, setTokenDraft] = useState(telegram.botToken);
+  const [showToken, setShowToken] = useState(false);
+  const [tgMessage, setTgMessage] = useState("");
+  const [tgBusy, setTgBusy] = useState(false);
   const nextDraw = latestDraw(draws).drawNo + 1;
+  const bought = saved.filter((item) => item.purchased && item.targetDrawNo === nextDraw).length;
 
   const enable = async () => {
     const result = await requestNotifyPermission();
     setPermission(result);
     if (result === "granted") updateAlerts({ enabled: true });
     else updateAlerts({ enabled: false });
+  };
+
+  const saveToken = () => {
+    updateTelegram({ botToken: tokenDraft.trim() });
+    setTgMessage("봇 토큰을 이 브라우저에만 저장했습니다.");
+  };
+
+  const detectChat = async () => {
+    setTgBusy(true);
+    setTgMessage("");
+    try {
+      const chatId = await fetchChatId(tokenDraft || telegram.botToken);
+      updateTelegram({ botToken: (tokenDraft || telegram.botToken).trim(), chatId });
+      setTgMessage(`채팅 ID ${chatId}를 저장했습니다.`);
+    } catch (error) {
+      setTgMessage(error instanceof Error ? error.message : "채팅 ID를 가져오지 못했습니다.");
+    } finally {
+      setTgBusy(false);
+    }
+  };
+
+  const testSend = async () => {
+    setTgBusy(true);
+    setTgMessage("");
+    try {
+      await sendTelegram(
+        { ...telegram, botToken: tokenDraft || telegram.botToken },
+        "ALLZYY LOTTO 연결 확인\n이 브라우저에 저장된 봇으로 메시지를 보냈습니다.",
+      );
+      setTgMessage("테스트 메시지를 보냈습니다.");
+    } catch (error) {
+      setTgMessage(error instanceof Error ? error.message : "메시지 전송에 실패했습니다.");
+    } finally {
+      setTgBusy(false);
+    }
   };
 
   return (
@@ -26,8 +76,8 @@ export function AlertsPage() {
           <div className="kicker">Reminders</div>
           <h2>구매 시점 검토 알림</h2>
           <p>
-            알림은 다음 추첨 전에 저장한 번호를 다시 볼 수 있게 돕기 위한 것입니다. 구매를 재촉하거나 반복 구매를
-            유도하지 않으며, 한 주에 한 번만 표시됩니다.
+            알림 시각이 되면 브라우저와 텔레그램으로 다음 회차 구매 표시를 알려 줍니다. 당첨번호가 새로 반영되면
+            구매로 표시한 번호의 결과도 텔레그램으로 보냅니다.
           </p>
         </div>
       </div>
@@ -87,33 +137,81 @@ export function AlertsPage() {
           </div>
           <p className="stat" style={{ marginTop: 16 }}>
             <b>{alerts.enabled ? scheduleLabel(alerts) : "꺼짐"}</b>
-            브라우저 권한 {permission} · 다음 대상 {nextDraw}회
+            브라우저 권한 {permission} · 다음 대상 {nextDraw}회 · 구매 표시 {bought}게임
           </p>
         </section>
 
         <section className="card">
-          <h3>남용과 오류를 줄이는 방식</h3>
-          <ul className="meta-list">
-            <li>같은 주에는 중복 발송하지 않습니다.</li>
-            <li>탭이 열려 있을 때만 시각을 확인하고, 서버 푸시는 사용하지 않습니다.</li>
-            <li>문구에 당첨 가능성이나 구매 독려를 넣지 않습니다.</li>
-            <li>알림 시각과 설정은 이 브라우저의 로컬 저장소에만 남습니다.</li>
-          </ul>
+          <h3>텔레그램 연결</h3>
+          <p style={{ color: "var(--muted)" }}>
+            BotFather에서 받은 봇 토큰과 채팅 ID는 이 브라우저의 로컬 저장소에만 남습니다. 서버나 GitHub로는
+            올라가지 않습니다.
+          </p>
+          <label className="field">
+            봇 토큰
+            <input
+              type={showToken ? "text" : "password"}
+              autoComplete="off"
+              value={tokenDraft}
+              onChange={(e) => setTokenDraft(e.target.value)}
+              placeholder="123456:ABC..."
+            />
+          </label>
+          <div className="btn-row" style={{ marginTop: 10 }}>
+            <button className="btn" type="button" onClick={() => setShowToken((v) => !v)}>
+              {showToken ? "토큰 숨기기" : "토큰 보기"}
+            </button>
+            <button className="btn" type="button" onClick={saveToken}>
+              토큰 저장
+            </button>
+          </div>
+          <label className="field" style={{ marginTop: 14 }}>
+            채팅 ID
+            <input
+              value={telegram.chatId}
+              onChange={(e) => updateTelegram({ chatId: e.target.value.trim() })}
+              placeholder="봇에게 메시지 후 가져오기"
+            />
+          </label>
+          <div className="btn-row" style={{ marginTop: 10 }}>
+            <button className="btn" type="button" disabled={tgBusy} onClick={() => void detectChat()}>
+              채팅 ID 가져오기
+            </button>
+            <button className="btn primary" type="button" disabled={tgBusy} onClick={() => void testSend()}>
+              테스트 보내기
+            </button>
+          </div>
+          <p style={{ color: "var(--dim)", fontSize: 12, marginBottom: 0 }}>
+            연결 {telegramReady({ ...telegram, botToken: tokenDraft || telegram.botToken }) ? "됨" : "안 됨"}
+            {telegram.botToken ? ` · 저장 토큰 ${maskToken(telegram.botToken)}` : ""}
+          </p>
+          {tgMessage && <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 0 }}>{tgMessage}</p>}
         </section>
       </div>
+
+      <section className="card" style={{ marginTop: 16 }}>
+        <h3>이렇게 동작합니다</h3>
+        <ul className="meta-list">
+          <li>저장함에서 구매함을 켜 두면, 그 회차 당첨번호가 반영될 때 당첨번호·구매번호·등수를 텔레그램으로 보냅니다.</li>
+          <li>구매 알림 시각이 되면 구매 표시 목록을 보내고, 없으면 검토하라는 안내만 보냅니다.</li>
+          <li>같은 회차 결과와 같은 주 알림은 한 번만 보냅니다.</li>
+          <li>봇에게 먼저 아무 말이나 보낸 뒤 채팅 ID를 가져오세요.</li>
+        </ul>
+      </section>
 
       <section className="card" style={{ marginTop: 16 }}>
         <h3>개인정보와 로컬 데이터</h3>
         <p style={{ color: "var(--muted)" }}>
           계정, 이메일, 전화번호는 받지 않습니다. 저장된 번호 {saved.length}개, 안내 확인 여부{" "}
-          {disclaimerAccepted ? "예" : "아니오"}, 알림 설정이 이 기기에만 있습니다. 공용 컴퓨터를 쓰면 사용 후
-          아래 버튼으로 지우는 것이 안전합니다.
+          {disclaimerAccepted ? "예" : "아니오"}, 알림·텔레그램 설정이 이 기기에만 있습니다. 공용 컴퓨터를 쓰면
+          사용 후 아래 버튼으로 지우는 것이 안전합니다.
         </p>
         <button
           className="btn danger"
           onClick={() => {
-            if (confirm("이 브라우저에 저장된 번호, 안내 확인, 알림 설정을 모두 삭제할까요?")) {
+            if (confirm("이 브라우저에 저장된 번호, 안내 확인, 알림·텔레그램 설정을 모두 삭제할까요?")) {
               clearLocalData();
+              setTokenDraft("");
             }
           }}
         >

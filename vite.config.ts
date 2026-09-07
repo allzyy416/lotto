@@ -6,5 +6,12 @@ export default defineConfig({
   server: {
     port: 5173,
     open: false,
+    proxy: {
+      "/tg-api": {
+        target: "https://api.telegram.org",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/tg-api/, ""),
+      },
+    },
   },
 });

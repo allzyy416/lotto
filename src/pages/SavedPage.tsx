@@ -7,10 +7,10 @@ import { formatDate } from "../lib/format";
 import { latestDraw } from "../lib/stats";
 import { STRATEGIES } from "../types";
 
-type Filter = "all" | "pending" | "hit" | "miss";
+type Filter = "all" | "pending" | "hit" | "miss" | "bought";
 
 export function SavedPage() {
-  const { saved, draws, removeSaved, setView } = useApp();
+  const { saved, draws, removeSaved, togglePurchased, setView } = useApp();
   const latest = latestDraw(draws);
   const [compareNo, setCompareNo] = useState(latest.drawNo);
   const [filter, setFilter] = useState<Filter>("all");
@@ -29,6 +29,7 @@ export function SavedPage() {
 
   const visible = rows.filter((row) => {
     if (filter === "pending") return !row.drawn;
+    if (filter === "bought") return Boolean(row.item.purchased);
     if (filter === "hit") return row.drawn && (row.official.rank ?? 0) > 0;
     if (filter === "miss") return row.drawn && row.official.rank === 0;
     return true;
@@ -45,8 +46,8 @@ export function SavedPage() {
           <div className="kicker">Saved · Compare</div>
           <h2>저장 번호와 당첨 비교</h2>
           <p>
-            추첨이 끝난 회차는 자동으로 일치 개수와 등수를 계산합니다. 아직 추첨 전인 번호는 아래에서 다른 회차와
-            대조해 볼 수 있습니다.
+            구매한 조합은 구매로 표시해 두세요. 해당 회차 당첨번호가 반영되면 일치 개수와 등수가 바로 보이고,
+            텔레그램이 연결되어 있으면 결과도 보내 줍니다.
           </p>
         </div>
         <button className="btn primary btn-wide" onClick={() => setView("generate")}>
@@ -54,11 +55,17 @@ export function SavedPage() {
         </button>
       </div>
 
-      <div className="grid grid-3">
+      <div className="grid grid-4">
         <section className="card">
           <p className="stat">
             <b>{saved.length}</b>
             저장된 조합
+          </p>
+        </section>
+        <section className="card">
+          <p className="stat">
+            <b>{saved.filter((item) => item.purchased).length}</b>
+            구매로 표시
           </p>
         </section>
         <section className="card">
@@ -85,6 +92,7 @@ export function SavedPage() {
         {(
           [
             ["all", "전체"],
+            ["bought", "구매"],
             ["pending", "미추첨"],
             ["hit", "등수"],
             ["miss", "낙첨"],
@@ -109,12 +117,23 @@ export function SavedPage() {
                   <div>
                     <div className="kicker">
                       대상 {item.targetDrawNo}회 · {STRATEGIES.find((s) => s.id === item.strategy)?.label}
+                      {item.purchased ? " · 구매" : ""}
                     </div>
                     <BallRow numbers={item.numbers} hits={preview.matched} />
                   </div>
-                  <button className="btn danger" onClick={() => removeSaved(item.id)}>
-                    삭제
-                  </button>
+                  <div className="btn-row">
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(item.purchased)}
+                        onChange={(e) => togglePurchased(item.id, e.target.checked)}
+                      />
+                      구매함
+                    </label>
+                    <button className="btn danger" onClick={() => removeSaved(item.id)}>
+                      삭제
+                    </button>
+                  </div>
                 </div>
                 <div className="kv">
                   <span>
@@ -127,13 +146,21 @@ export function SavedPage() {
                     보너스 <b>{preview.bonusHit ? "포함" : "없음"}</b>
                   </span>
                   <span className={`rank-${preview.rank}`}>
-                    {drawn ? "결과" : "미리보기"} <b>{RANK_LABEL[preview.rank]}</b>
+                    {item.purchased && drawn ? "당첨 결과" : drawn ? "결과" : "미리보기"}{" "}
+                    <b>{RANK_LABEL[preview.rank]}</b>
                   </span>
                 </div>
+                {item.purchased && drawn && (
+                  <p style={{ margin: 0, color: "var(--muted)", fontSize: 13 }}>
+                    구매로 표시한 {item.targetDrawNo}회 공식 결과입니다.
+                  </p>
+                )}
                 {!drawn && (
                   <p style={{ margin: 0, color: "var(--dim)", fontSize: 12 }}>
-                    {item.targetDrawNo}회는 아직 결과가 없습니다. 위 미리보기는 선택한 {compareDraw.drawNo}회와의
-                    대조입니다.
+                    {item.targetDrawNo}회는 아직 결과가 없습니다.
+                    {item.purchased
+                      ? " 당첨번호가 반영되면 이 화면과 텔레그램으로 결과를 보여 줍니다."
+                      : ` 위 미리보기는 선택한 ${compareDraw.drawNo}회와의 대조입니다.`}
                   </p>
                 )}
               </article>

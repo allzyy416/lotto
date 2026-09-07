@@ -1,10 +1,11 @@
-import type { AlertSettings, SavedCombo } from "../types";
+import type { AlertSettings, SavedCombo, TelegramSettings } from "../types";
 
 const KEYS = {
   disclaimer: "lottolab:disclaimer",
   saved: "lottolab:saved",
   alerts: "lottolab:alerts",
   extraDraws: "lottolab:extraDraws",
+  telegram: "lottolab:telegram",
 } as const;
 
 function read<T>(key: string, fallback: T): T {
@@ -30,7 +31,24 @@ export function saveDisclaimerAccepted(value: boolean): void {
 }
 
 export function loadSaved(): SavedCombo[] {
-  return read<SavedCombo[]>(KEYS.saved, []);
+  return read<SavedCombo[]>(KEYS.saved, []).map((item) => ({
+    ...item,
+    purchased: Boolean(item.purchased),
+  }));
+}
+
+export const DEFAULT_TELEGRAM: TelegramSettings = {
+  botToken: "",
+  chatId: "",
+  lastResultDrawNo: 0,
+};
+
+export function loadTelegram(): TelegramSettings {
+  return { ...DEFAULT_TELEGRAM, ...read<Partial<TelegramSettings>>(KEYS.telegram, {}) };
+}
+
+export function saveTelegram(settings: TelegramSettings): void {
+  write(KEYS.telegram, settings);
 }
 
 export function saveSaved(items: SavedCombo[]): void {

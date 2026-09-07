@@ -48,10 +48,17 @@ export interface GeneratedCombo {
 
 export interface SavedCombo extends GeneratedCombo {
   targetDrawNo: number;
+  purchased?: boolean;
   comparedDrawNo?: number;
   matches?: number;
   bonusHit?: boolean;
   rank?: number;
+}
+
+export interface TelegramSettings {
+  botToken: string;
+  chatId: string;
+  lastResultDrawNo: number;
 }
 
 export interface AlertSettings {

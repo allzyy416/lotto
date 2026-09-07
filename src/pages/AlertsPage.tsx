@@ -61,7 +61,7 @@ export function AlertsPage() {
         { ...telegram, botToken: tokenDraft || telegram.botToken },
         "ALLZYY LOTTO 연결 확인\n이 브라우저에 저장된 봇으로 메시지를 보냈습니다.",
       );
-      setTgMessage("테스트 메시지를 보냈습니다.");
+      setTgMessage("테스트 메시지를 보냈습니다. 텔레그램에서 확인해 주세요.");
     } catch (error) {
       setTgMessage(error instanceof Error ? error.message : "메시지 전송에 실패했습니다.");
     } finally {
@@ -170,7 +170,7 @@ export function AlertsPage() {
             <input
               value={telegram.chatId}
               onChange={(e) => updateTelegram({ chatId: e.target.value.trim() })}
-              placeholder="봇에게 메시지 후 가져오기"
+              placeholder="숫자 ID. 모르면 봇에게 말한 뒤 가져오기"
             />
           </label>
           <div className="btn-row" style={{ marginTop: 10 }}>
@@ -195,7 +195,7 @@ export function AlertsPage() {
           <li>저장함에서 구매함을 켜 두면, 그 회차 당첨번호가 반영될 때 당첨번호·구매번호·등수를 텔레그램으로 보냅니다.</li>
           <li>구매 알림 시각이 되면 구매 표시 목록을 보내고, 없으면 검토하라는 안내만 보냅니다.</li>
           <li>같은 회차 결과와 같은 주 알림은 한 번만 보냅니다.</li>
-          <li>봇에게 먼저 아무 말이나 보낸 뒤 채팅 ID를 가져오세요.</li>
+          <li>채팅 ID는 직접 넣어도 됩니다. 가져오기가 안 되면 @userinfobot에서 숫자 ID를 확인하세요.</li>
         </ul>
       </section>
 

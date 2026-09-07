@@ -144,8 +144,8 @@ export function AlertsPage() {
         <section className="card">
           <h3>텔레그램 연결</h3>
           <p style={{ color: "var(--muted)" }}>
-            BotFather에서 받은 봇 토큰과 채팅 ID는 이 브라우저의 로컬 저장소에만 남습니다. 서버나 GitHub로는
-            올라가지 않습니다.
+            BotFather에서 받은 봇 토큰과 채팅 ID는 이 브라우저의 로컬 저장소에만 남습니다. 테스트 전에
+            텔레그램에서 그 봇을 열고 시작을 눌러 두세요.
           </p>
           <label className="field">
             봇 토큰
@@ -195,7 +195,7 @@ export function AlertsPage() {
           <li>저장함에서 구매함을 켜 두면, 그 회차 당첨번호가 반영될 때 당첨번호·구매번호·등수를 텔레그램으로 보냅니다.</li>
           <li>구매 알림 시각이 되면 구매 표시 목록을 보내고, 없으면 검토하라는 안내만 보냅니다.</li>
           <li>같은 회차 결과와 같은 주 알림은 한 번만 보냅니다.</li>
-          <li>채팅 ID는 직접 넣어도 됩니다. 가져오기가 안 되면 @userinfobot에서 숫자 ID를 확인하세요.</li>
+          <li>텔레그램에서 봇에게 먼저 시작 또는 아무 말을 보낸 뒤 테스트하세요. 채팅 ID는 직접 넣어도 됩니다.</li>
         </ul>
       </section>
 

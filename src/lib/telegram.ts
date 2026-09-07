@@ -3,7 +3,6 @@ import { compareCombo } from "./compare";
 import type { Draw, SavedCombo, TelegramSettings } from "../types";
 
 const PROXY_BASE = "/tg-api";
-const DIRECT_BASE = "https://api.telegram.org";
 
 export function telegramReady(settings: TelegramSettings): boolean {
   return Boolean(settings.botToken.trim() && settings.chatId.trim());
@@ -15,70 +14,38 @@ export function maskToken(token: string): string {
   return `${value.slice(0, 4)}…${value.slice(-4)}`;
 }
 
-function parseTelegram(text: string): { ok: boolean; description?: string; result?: unknown } {
-  const trimmed = text.trim();
-  if (!trimmed || trimmed.startsWith("<")) {
-    throw new Error("HTML");
+function friendlyTelegramError(description?: string): string {
+  const text = (description || "").toLowerCase();
+  if (text.includes("unauthorized")) {
+    return "봇 토큰이 올바르지 않습니다. BotFather에서 다시 확인하세요.";
   }
-  return JSON.parse(trimmed) as { ok: boolean; description?: string; result?: unknown };
+  if (text.includes("chat not found") || text.includes("chat_id is empty")) {
+    return "채팅 ID가 올바르지 않습니다. 숫자 ID를 다시 확인하세요.";
+  }
+  if (text.includes("blocked") || text.includes("initiate conversation") || text.includes("forbidden")) {
+    return "텔레그램에서 이 봇을 열고 시작을 누른 뒤 다시 보내세요.";
+  }
+  return description || "텔레그램 요청에 실패했습니다.";
 }
 
-async function fetchTelegram(url: string, body?: Record<string, unknown>) {
-  const res = await fetch(url, {
+async function telegramCall(token: string, method: string, body?: Record<string, unknown>) {
+  const res = await fetch(`${PROXY_BASE}/bot${token.trim()}/${method}`, {
     method: body ? "POST" : "GET",
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
-  const text = await res.text();
-  const data = parseTelegram(text);
-  if (!data.ok) throw new Error(data.description || "텔레그램 요청에 실패했습니다.");
+  const text = (await res.text()).trim();
+  if (!text || text.startsWith("<")) {
+    throw new Error("서버에 텔레그램 연결이 없습니다. EC2에서 배포 명령을 실행한 뒤 다시 시도하세요.");
+  }
+  let data: { ok: boolean; description?: string; result?: unknown };
+  try {
+    data = JSON.parse(text) as { ok: boolean; description?: string; result?: unknown };
+  } catch {
+    throw new Error("텔레그램 응답을 읽지 못했습니다. 잠시 후 다시 시도하세요.");
+  }
+  if (!data.ok) throw new Error(friendlyTelegramError(data.description));
   return data.result;
-}
-
-function queryUrl(base: string, token: string, method: string, params?: Record<string, unknown>) {
-  const qs = new URLSearchParams();
-  if (params) {
-    for (const [key, value] of Object.entries(params)) {
-      if (value != null) qs.set(key, String(value));
-    }
-  }
-  const query = qs.toString();
-  return `${base}/bot${token.trim()}/${method}${query ? `?${query}` : ""}`;
-}
-
-async function sendOpaque(url: string): Promise<void> {
-  try {
-    await fetch(url, { method: "GET", mode: "no-cors", cache: "no-store" });
-  } catch {
-    await new Promise<void>((resolve) => {
-      const img = new Image();
-      const done = () => resolve();
-      img.onload = done;
-      img.onerror = done;
-      img.src = url;
-      window.setTimeout(done, 2000);
-    });
-  }
-}
-
-async function telegramCall(token: string, method: string, body?: Record<string, unknown>) {
-  const clean = token.trim();
-  try {
-    return await fetchTelegram(queryUrl(PROXY_BASE, clean, method), body);
-  } catch {
-    try {
-      return await fetchTelegram(queryUrl(DIRECT_BASE, clean, method), body);
-    } catch {
-      if (method === "sendMessage" && body) {
-        await sendOpaque(queryUrl(DIRECT_BASE, clean, method, body));
-        return undefined;
-      }
-      if (method === "getUpdates") {
-        throw new Error("채팅 ID는 입력칸에 직접 넣으면 됩니다. 봇에게 말을 건 뒤 @userinfobot에서 숫자 ID를 확인하세요.");
-      }
-      throw new Error("텔레그램에 연결하지 못했습니다. 토큰과 채팅 ID를 다시 확인하세요.");
-    }
-  }
 }
 
 export async function sendTelegram(settings: TelegramSettings, text: string): Promise<void> {
@@ -93,7 +60,7 @@ export async function sendTelegram(settings: TelegramSettings, text: string): Pr
 export async function fetchChatId(token: string): Promise<string> {
   const result = (await telegramCall(token, "getUpdates")) as { message?: { chat?: { id?: number } } }[];
   const chatId = [...result].reverse().find((row) => row.message?.chat?.id)?.message?.chat?.id;
-  if (!chatId) throw new Error("봇에게 먼저 아무 메시지나 보낸 뒤 다시 시도하세요.");
+  if (!chatId) throw new Error("텔레그램에서 봇을 열고 아무 말이나 보낸 뒤 다시 시도하세요.");
   return String(chatId);
 }
 

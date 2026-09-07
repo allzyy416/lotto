@@ -18,7 +18,7 @@ export function Layout({ children }: { children: ReactNode }) {
           }}
         >
           <div className="brand-mark">
-            <span />
+            <img src="/brand-mark.png" alt="" width={36} height={36} />
           </div>
           <div>
             <h1>로또랩</h1>

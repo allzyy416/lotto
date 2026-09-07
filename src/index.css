@@ -96,9 +96,10 @@ a { color: var(--gold-2); }
 .brand h1 {
   margin: 0;
   font-family: var(--sans);
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 .brand p {
   margin: 6px 0 0;
@@ -460,7 +461,7 @@ th { color: var(--dim); font-weight: 600; font-size: 12px; }
     gap: 10px;
   }
   .brand-mark { width: 28px; height: 28px; margin-bottom: 0; }
-  .brand h1 { font-size: 22px; }
+  .brand h1 { font-size: 16px; }
   .brand p,
   .nav-side,
   .sidebar-foot { display: none; }

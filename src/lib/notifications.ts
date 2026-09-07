@@ -23,7 +23,7 @@ export function reminderDue(settings: AlertSettings, now = new Date()): boolean 
 }
 
 export function showPurchaseReminder(nextDrawNo: number): void {
-  const title = "로또랩 번호 검토 알림";
+  const title = "ALLZYY LOTTO 번호 검토 알림";
   const body = `${nextDrawNo}회 추첨 전, 저장한 번호를 한 번 더 살펴보세요. 알림은 당첨을 보장하지 않으며 구매를 권유하지 않습니다.`;
   if (canNotify()) {
     new Notification(title, { body, silent: false });

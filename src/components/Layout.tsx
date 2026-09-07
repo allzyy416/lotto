@@ -21,7 +21,7 @@ export function Layout({ children }: { children: ReactNode }) {
             <img src="/brand-mark.png" alt="" width={36} height={36} />
           </div>
           <div>
-            <h1>로또랩</h1>
+            <h1>ALLZYY LOTTO</h1>
             <p>통계로 검토하는 번호 생성</p>
           </div>
         </a>

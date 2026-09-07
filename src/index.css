@@ -194,6 +194,16 @@ a { color: var(--gold-2); }
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
 .grid-split { grid-template-columns: 1fr 1fr; }
 
+.dash {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+  gap: 16px;
+  align-items: start;
+}
+.dash-main,
+.dash-side { display: grid; gap: 16px; min-width: 0; }
+.dash-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-width: 0; }
+
 .card, .panel { padding: 20px; }
 .card h3, .panel h3 {
   margin: 0 0 12px;
@@ -420,7 +430,7 @@ th { color: var(--dim); font-weight: 600; font-size: 12px; }
 .rank-0 { color: var(--dim); }
 
 @media (max-width: 1100px) {
-  .grid-2, .grid-3, .grid-4, .grid-split { grid-template-columns: 1fr; }
+  .grid-2, .grid-3, .grid-4, .grid-split, .dash, .dash-pair { grid-template-columns: 1fr; }
   .app { grid-template-columns: 1fr; }
   .sidebar {
     position: relative;

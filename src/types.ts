@@ -8,7 +8,7 @@ export interface Draw {
   sales: number;
 }
 
-export type Strategy = "balanced" | "hot" | "frequency" | "mixed";
+export type Strategy = "balanced" | "hot" | "frequency" | "mixed" | "ai";
 export type View = "home" | "analysis" | "generate" | "saved" | "alerts";
 export type NumberTag = "hot" | "warm" | "cold" | "neutral";
 
@@ -111,5 +111,11 @@ export const STRATEGIES: {
     id: "mixed",
     label: "혼합",
     summary: "빈도 상위, 최근 핫 번호, 공백이 긴 콜드 번호를 섞어 한쪽으로 치우치지 않게 구성합니다.",
+  },
+  {
+    id: "ai",
+    label: "AI 추첨",
+    summary:
+      "GPT가 전체 빈도, 최근 추세, 홀짝·저고·구간·합계와 물리 추첨기의 일반 변동을 함께 보고 조합을 제안합니다. 당첨 확률은 바뀌지 않습니다.",
   },
 ];

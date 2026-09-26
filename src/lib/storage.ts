@@ -6,6 +6,7 @@ const KEYS = {
   alerts: "lottolab:alerts",
   extraDraws: "lottolab:extraDraws",
   telegram: "lottolab:telegram",
+  openai: "lottolab:openai",
 } as const;
 
 function read<T>(key: string, fallback: T): T {
@@ -49,6 +50,14 @@ export function loadTelegram(): TelegramSettings {
 
 export function saveTelegram(settings: TelegramSettings): void {
   write(KEYS.telegram, settings);
+}
+
+export function loadOpenAiKey(): string {
+  return read<{ apiKey?: string }>(KEYS.openai, {}).apiKey?.trim() ?? "";
+}
+
+export function saveOpenAiKey(apiKey: string): void {
+  write(KEYS.openai, { apiKey: apiKey.trim() });
 }
 
 export function saveSaved(items: SavedCombo[]): void {

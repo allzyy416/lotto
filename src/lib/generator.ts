@@ -1,5 +1,7 @@
 import type { CombinationAnalysis, Draw, GeneratedCombo, Strategy } from "../types";
+import { buildAiBrief } from "./aiBrief";
 import { BALL_MAX, PICK_COUNT, RECENT_WINDOW, TYPICAL_SUM } from "./constants";
+import { completeJson } from "./openai";
 import {
   bandSpreadCount,
   comboShape,
@@ -87,6 +89,10 @@ function analyze(numbers: number[], draws: Draw[], strategy: Strategy): Combinat
   } else if (strategy === "frequency") {
     criteria.push("1회부터 최신 회차까지 출현 빈도에 가중 표본 추출");
     criteria.push("극단적인 합계·연속 조합은 다시 추출");
+  } else if (strategy === "ai") {
+    criteria.push("GPT가 전체 빈도, 최근 20회 추세, 홀짝·저고·구간·합계 분포를 함께 검토");
+    criteria.push("물리 추첨기 점검·마모의 공개 수치 오차는 없어, 한 회차나 한 구간에 과적합하지 않게 분산");
+    criteria.push("모든 조합의 당첨 확률은 같습니다. 검토용 제안이며 예측이 아닙니다");
   } else {
     criteria.push("빈도 상위 · 최근 핫 · 공백이 긴 콜드 번호를 혼합");
     criteria.push("홀짝·저고 균형을 유지하고 구간을 3곳 이상에 분산");
@@ -105,6 +111,9 @@ function analyze(numbers: number[], draws: Draw[], strategy: Strategy): Combinat
 }
 
 export function generateCombos(draws: Draw[], strategy: Strategy, count = 5): GeneratedCombo[] {
+  if (strategy === "ai") {
+    throw new Error("AI 추첨은 generateAiCombos를 사용하세요.");
+  }
   const started = performance.now();
   const weights = baseWeights(strategy, draws);
   const banned = new Set(draws.slice(-80).map((d) => [...d.numbers].sort((a, b) => a - b).join(",")));
@@ -129,4 +138,79 @@ export function generateCombos(draws: Draw[], strategy: Strategy, count = 5): Ge
 
   const elapsed = Math.max(1, Math.round(performance.now() - started));
   return results.map((item) => ({ ...item, elapsedMs: elapsed }));
+}
+
+function normalizeAiNumbers(raw: unknown): number[] | null {
+  if (!Array.isArray(raw)) return null;
+  const nums = [
+    ...new Set(
+      raw
+        .map((value) => Number(value))
+        .filter((n) => Number.isInteger(n) && n >= 1 && n <= BALL_MAX),
+    ),
+  ].sort((a, b) => a - b);
+  return nums.length === PICK_COUNT ? nums : null;
+}
+
+function readAiReasons(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => String(item).trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+export async function generateAiCombos(draws: Draw[], count = 5, apiKey: string): Promise<GeneratedCombo[]> {
+  const started = performance.now();
+  const key = apiKey.trim();
+  if (!key) throw new Error("OpenAI API 키를 저장하세요.");
+
+  const banned = new Set(draws.slice(-80).map((d) => [...d.numbers].sort((a, b) => a - b).join(",")));
+  const parsed = await completeJson(
+    key,
+    "당신은 한국 로또 6/45 통계 검토 보조다. 각 회차는 독립이고 모든 조합의 당첨 확률은 같다. 통계와 물리 추첨의 일반 변동만 보고 검토용 조합을 제안하며, 예측·보장·당첨 확률 상승을 말하지 않는다. JSON만 답한다.",
+    buildAiBrief(draws, count, [...banned]),
+  );
+  const games = (parsed as { games?: unknown }).games;
+  if (!Array.isArray(games)) throw new Error("GPT가 조합 목록을 보내지 않았습니다. 다시 시도하세요.");
+
+  const results: GeneratedCombo[] = [];
+  for (const game of games) {
+    if (results.length >= count) break;
+    const row = game as { numbers?: unknown; reasons?: unknown };
+    const numbers = normalizeAiNumbers(row.numbers);
+    if (!numbers) continue;
+    const setKey = numbers.join(",");
+    if (banned.has(setKey)) continue;
+    banned.add(setKey);
+    const analysis = analyze(numbers, draws, "ai");
+    results.push({
+      id: uid(),
+      numbers,
+      strategy: "ai",
+      createdAt: new Date().toISOString(),
+      elapsedMs: 0,
+      analysis: {
+        ...analysis,
+        appliedCriteria: [...analysis.appliedCriteria, ...readAiReasons(row.reasons)],
+      },
+    });
+  }
+
+  if (results.length < count) {
+    const fill = generateCombos(draws, "balanced", count - results.length);
+    for (const item of fill) {
+      results.push({
+        ...item,
+        strategy: "ai",
+        analysis: {
+          ...item.analysis,
+          appliedCriteria: ["GPT 조합이 부족해 균형 기준으로 보충했습니다.", ...item.analysis.appliedCriteria],
+        },
+      });
+    }
+  }
+
+  const elapsed = Math.max(1, Math.round(performance.now() - started));
+  return results.slice(0, count).map((item) => ({ ...item, elapsedMs: elapsed }));
 }

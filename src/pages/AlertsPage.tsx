@@ -203,13 +203,13 @@ export function AlertsPage() {
         <h3>개인정보와 로컬 데이터</h3>
         <p style={{ color: "var(--muted)" }}>
           계정, 이메일, 전화번호는 받지 않습니다. 저장된 번호 {saved.length}개, 안내 확인 여부{" "}
-          {disclaimerAccepted ? "예" : "아니오"}, 알림·텔레그램 설정이 이 기기에만 있습니다. 공용 컴퓨터를 쓰면
-          사용 후 아래 버튼으로 지우는 것이 안전합니다.
+          {disclaimerAccepted ? "예" : "아니오"}, 알림·텔레그램·OpenAI 키가 이 기기에만 있습니다. 공용 컴퓨터를
+          쓰면 사용 후 아래 버튼으로 지우는 것이 안전합니다.
         </p>
         <button
           className="btn danger"
           onClick={() => {
-            if (confirm("이 브라우저에 저장된 번호, 안내 확인, 알림·텔레그램 설정을 모두 삭제할까요?")) {
+            if (confirm("이 브라우저에 저장된 번호, 안내 확인, 알림·텔레그램·OpenAI 키를 모두 삭제할까요?")) {
               clearLocalData();
               setTokenDraft("");
             }

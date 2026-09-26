@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Ball, BallRow } from "../components/Ball";
 import { useApp } from "../lib/context";
 import { compareCombo } from "../lib/compare";
-import { generateCombos } from "../lib/generator";
+import { generateAiCombos, generateCombos } from "../lib/generator";
 import { BANDS, RANK_LABEL } from "../lib/constants";
 import { latestDraw } from "../lib/stats";
+import { loadOpenAiKey, saveOpenAiKey } from "../lib/storage";
 import { STRATEGIES, type GeneratedCombo, type Strategy } from "../types";
 
 export function GeneratePage() {
@@ -13,10 +14,42 @@ export function GeneratePage() {
   const [gameCount, setGameCount] = useState(5);
   const [combos, setCombos] = useState<GeneratedCombo[]>([]);
   const [elapsed, setElapsed] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [apiKeyDraft, setApiKeyDraft] = useState(loadOpenAiKey);
+  const [showKey, setShowKey] = useState(false);
   const nextDraw = latestDraw(draws).drawNo + 1;
 
-  const run = () => {
-    if (!disclaimerAccepted) return;
+  const saveKey = () => {
+    saveOpenAiKey(apiKeyDraft);
+    setError("");
+  };
+
+  const run = async () => {
+    if (!disclaimerAccepted || busy) return;
+    setError("");
+    if (strategy === "ai") {
+      const key = apiKeyDraft.trim() || loadOpenAiKey();
+      if (!key) {
+        setError("AI 추첨에는 OpenAI API 키가 필요합니다. 키를 입력한 뒤 저장하세요.");
+        return;
+      }
+      saveOpenAiKey(key);
+      setBusy(true);
+      const started = performance.now();
+      try {
+        const next = await generateAiCombos(draws, gameCount, key);
+        setElapsed(Math.max(1, Math.round(performance.now() - started)));
+        setCombos(next);
+      } catch (err) {
+        setElapsed(null);
+        setCombos([]);
+        setError(err instanceof Error ? err.message : "GPT 생성에 실패했습니다.");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     const started = performance.now();
     const next = generateCombos(draws, strategy, gameCount);
     setElapsed(Math.max(1, Math.round(performance.now() - started)));
@@ -32,7 +65,7 @@ export function GeneratePage() {
             <h3>통계는 당첨을 보장하지 않습니다</h3>
             <p>
               로또 각 회차의 추첨은 독립 시행입니다. 1부터 45까지 6개를 고른 모든 조합의 당첨 확률은 같습니다.
-              출현 빈도, 최근 추세, 홀짝·저고·구간 분포는 번호를 검토하는 참고 정보일 뿐 예측이 아닙니다.
+              출현 빈도, 최근 추세, 홀짝·저고·구간 분포, AI 추첨은 번호를 검토하는 참고 정보일 뿐 예측이 아닙니다.
             </p>
             <p>
               생성 결과를 확정적 예언으로 오해하거나, 손실을 만회하려고 반복 구매하지 마세요. 구매 여부는
@@ -53,10 +86,10 @@ export function GeneratePage() {
       <div className="page-head">
         <div>
           <div className="kicker">Generate</div>
-          <h2>통계 기준 원클릭 생성</h2>
+          <h2>통계·AI 기준 원클릭 생성</h2>
           <p>
             원하는 게임 수만큼 한 번에 만듭니다. 각 조합에는 적용된 기준과 번호별 빈도·추세 태그가 함께 표시됩니다.
-            대상 회차는 {nextDraw}회입니다.
+            AI 추첨은 당첨 확률을 바꾸지 않습니다. 대상 회차는 {nextDraw}회입니다.
           </p>
         </div>
         <div className="generate-actions">
@@ -75,8 +108,12 @@ export function GeneratePage() {
               ))}
             </div>
           </div>
-          <button className="btn primary btn-wide" onClick={run} disabled={!disclaimerAccepted}>
-            번호 {gameCount}게임 생성
+          <button
+            className="btn primary btn-wide"
+            onClick={() => void run()}
+            disabled={!disclaimerAccepted || busy}
+          >
+            {busy ? "GPT 검토 중…" : `번호 ${gameCount}게임 생성`}
           </button>
         </div>
       </div>
@@ -100,6 +137,31 @@ export function GeneratePage() {
               </label>
             ))}
           </div>
+          {strategy === "ai" && (
+            <div style={{ marginTop: 16 }}>
+              <label className="field">
+                OpenAI API 키
+                <input
+                  type={showKey ? "text" : "password"}
+                  autoComplete="off"
+                  value={apiKeyDraft}
+                  onChange={(e) => setApiKeyDraft(e.target.value)}
+                  placeholder="sk-..."
+                />
+              </label>
+              <div className="btn-row" style={{ marginTop: 10 }}>
+                <button className="btn" type="button" onClick={() => setShowKey((v) => !v)}>
+                  {showKey ? "키 숨기기" : "키 보기"}
+                </button>
+                <button className="btn" type="button" onClick={saveKey}>
+                  키 저장
+                </button>
+              </div>
+              <p style={{ color: "var(--dim)", fontSize: 12, marginBottom: 0 }}>
+                키는 이 브라우저에만 저장됩니다. 통계 요약만 OpenAI로 보내고, 당첨 확률은 바뀌지 않습니다.
+              </p>
+            </div>
+          )}
         </section>
         <section className="card">
           <h3>생성 시 함께 보는 정보</h3>
@@ -107,8 +169,17 @@ export function GeneratePage() {
             <li>전체 출현 빈도와 최근 20회 추세를 번호마다 분리해 표시</li>
             <li>홀짝, 저고, 구간, 합계, 연속 쌍이 과거 전형과 얼마나 가까운지 요약</li>
             <li>최근 80회와 동일한 당첨 번호 세트는 다시 뽑지 않음</li>
-            <li>결과는 이 브라우저에만 저장되며 서버로 전송되지 않음</li>
+            <li>
+              {strategy === "ai"
+                ? "AI 추첨은 통계 요약만 OpenAI로 보내며, 키와 결과는 이 브라우저에만 남음"
+                : "결과는 이 브라우저에만 저장되며 서버로 전송되지 않음"}
+            </li>
           </ul>
+          {error && (
+            <p className="stat" style={{ marginTop: 16, color: "var(--bad)" }}>
+              {error}
+            </p>
+          )}
           {elapsed != null && (
             <p className="stat" style={{ marginTop: 16 }}>
               <b>{elapsed}ms</b>

@@ -77,6 +77,53 @@ a { color: var(--gold-2); }
 
 .header-status { display: none; }
 
+.game-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+}
+.game-switch button {
+  border: 0;
+  background: transparent;
+  color: var(--dim);
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 36px;
+  border-radius: 10px;
+}
+.game-switch button.active {
+  background: var(--gold);
+  color: #2a2108;
+}
+
+.digit-ball {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 15px;
+}
+.digit-ball.group {
+  width: auto;
+  min-width: 48px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #e4b84a;
+  color: #2a2108;
+}
+.digit-ball.hit { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--ok); }
+.digit-ball.miss { opacity: 0.45; }
+.pension-balls { align-items: center; }
+.game-switch-main { display: none; margin: 0 0 14px; max-width: 360px; }
+
 .brand { text-decoration: none; color: inherit; display: block; }
 .brand-mark {
   width: 36px;
@@ -514,7 +561,9 @@ th { color: var(--dim); font-weight: 600; font-size: 12px; }
   .brand h1 { font-size: 16px; }
   .brand p,
   .nav-side,
-  .sidebar-foot { display: none; }
+  .sidebar-foot,
+  .sidebar .game-switch { display: none; }
+  .game-switch-main { display: grid; }
   .header-status {
     display: inline-flex;
     align-items: center;
@@ -581,6 +630,8 @@ th { color: var(--dim); font-weight: 600; font-size: 12px; }
   .balls { gap: 6px; }
   .hero-draw .balls { flex-wrap: nowrap; }
   .ball { width: 36px; height: 36px; font-size: 13px; }
+  .digit-ball { width: 34px; height: 34px; font-size: 13px; }
+  .digit-ball.group { min-width: 42px; font-size: 12px; }
   .ball.sm { width: 28px; height: 28px; font-size: 11px; }
   .combo-top { flex-direction: column; }
   .combo-top .btn { width: 100%; }

@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
-import { OFFICIAL_RESULT_URL } from "../lib/constants";
+import { OFFICIAL_PENSION_URL, OFFICIAL_RESULT_URL } from "../lib/constants";
 import { useApp } from "../lib/context";
 import { VIEWS } from "../types";
 
 export function Layout({ children }: { children: ReactNode }) {
-  const { view, setView, status, reminderBanner, dismissReminder } = useApp();
+  const { view, setView, gameKind, setGameKind, status, reminderBanner, dismissReminder } = useApp();
+  const officialUrl = gameKind === "pension" ? OFFICIAL_PENSION_URL : OFFICIAL_RESULT_URL;
 
   return (
     <div className="app">
@@ -22,7 +23,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
           <div>
             <h1>ALLZYY LOTTO</h1>
-            <p>통계로 검토하는 번호 생성</p>
+            <p>{gameKind === "pension" ? "연금복권720+ 통계 검토" : "로또 6/45 통계 검토"}</p>
           </div>
         </a>
         <div className="header-status">
@@ -30,6 +31,22 @@ export function Layout({ children }: { children: ReactNode }) {
             className={`status-dot ${status.refreshState === "error" ? "error" : status.refreshState === "loading" ? "loading" : ""}`}
           />
           {status.latestDrawNo}회
+        </div>
+        <div className="game-switch">
+          <button
+            type="button"
+            className={gameKind === "lotto" ? "active" : ""}
+            onClick={() => setGameKind("lotto")}
+          >
+            로또 6/45
+          </button>
+          <button
+            type="button"
+            className={gameKind === "pension" ? "active" : ""}
+            onClick={() => setGameKind("pension")}
+          >
+            연금복권
+          </button>
         </div>
         <nav className="nav nav-side">
           {VIEWS.map((item) => (
@@ -54,6 +71,22 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       </aside>
       <main className="main">
+        <div className="game-switch game-switch-main">
+          <button
+            type="button"
+            className={gameKind === "lotto" ? "active" : ""}
+            onClick={() => setGameKind("lotto")}
+          >
+            로또 6/45
+          </button>
+          <button
+            type="button"
+            className={gameKind === "pension" ? "active" : ""}
+            onClick={() => setGameKind("pension")}
+          >
+            연금복권
+          </button>
+        </div>
         {reminderBanner && (
           <div className="banner alert">
             <p>
@@ -66,9 +99,10 @@ export function Layout({ children }: { children: ReactNode }) {
         )}
         <div className="banner">
           <p>
-            <strong>안내</strong> · 과거 데이터와 최근 추세는 미래 당첨을 예측하거나 확률을 높이지 않습니다.
+            <strong>안내</strong> · {gameKind === "pension" ? "연금복권720+" : "로또 6/45"} 과거 데이터와 최근 추세는
+            미래 당첨을 예측하거나 확률을 높이지 않습니다.
             최종 구매 전{" "}
-            <a href={OFFICIAL_RESULT_URL} target="_blank" rel="noreferrer">
+            <a href={officialUrl} target="_blank" rel="noreferrer">
               동행복권 공식 결과
             </a>
             를 확인하세요.

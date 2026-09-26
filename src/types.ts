@@ -9,6 +9,7 @@ export interface Draw {
 }
 
 export type Strategy = "balanced" | "hot" | "frequency" | "mixed" | "ai";
+export type GameKind = "lotto" | "pension";
 export type View = "home" | "analysis" | "generate" | "saved" | "alerts";
 export type NumberTag = "hot" | "warm" | "cold" | "neutral";
 
@@ -51,6 +52,41 @@ export interface SavedCombo extends GeneratedCombo {
   purchased?: boolean;
   comparedDrawNo?: number;
   matches?: number;
+  bonusHit?: boolean;
+  rank?: number;
+}
+
+export interface PensionDraw {
+  drawNo: number;
+  date: string;
+  group: number;
+  digits: number[];
+  bonusDigits: number[];
+}
+
+export interface PensionAnalysis {
+  oddEven: [number, number];
+  digitSum: number;
+  uniqueDigits: number;
+  consecutivePairs: number;
+  appliedCriteria: string[];
+}
+
+export interface GeneratedPension {
+  id: string;
+  group: number;
+  digits: number[];
+  strategy: Strategy;
+  createdAt: string;
+  elapsedMs: number;
+  analysis: PensionAnalysis;
+}
+
+export interface SavedPension extends GeneratedPension {
+  targetDrawNo: number;
+  purchased?: boolean;
+  comparedDrawNo?: number;
+  suffixHits?: number;
   bonusHit?: boolean;
   rank?: number;
 }

@@ -7,18 +7,34 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { AlertSettings, DataStatus, Draw, SavedCombo, TelegramSettings, View } from "../types";
+import type {
+  AlertSettings,
+  DataStatus,
+  Draw,
+  GameKind,
+  PensionDraw,
+  SavedCombo,
+  SavedPension,
+  TelegramSettings,
+  View,
+} from "../types";
 import { compareCombo } from "./compare";
 import { loadLocalDraws, refreshDraws, validateDraw } from "./data";
+import { comparePension } from "./pensionCompare";
+import { latestPension, loadLocalPensionDraws, refreshPensionDraws, validatePensionDraw } from "./pensionData";
 import { latestDraw } from "./stats";
 import {
   loadAlerts,
   loadDisclaimerAccepted,
+  loadGameKind,
   loadSaved,
+  loadSavedPension,
   loadTelegram,
   saveAlerts,
   saveDisclaimerAccepted,
+  saveGameKind,
   saveSaved,
+  saveSavedPension,
   saveTelegram,
   clearAllUserData,
 } from "./storage";
@@ -29,7 +45,10 @@ import { weekKey } from "./format";
 interface AppState {
   view: View;
   setView: (view: View) => void;
+  gameKind: GameKind;
+  setGameKind: (kind: GameKind) => void;
   draws: Draw[];
+  pensionDraws: PensionDraw[];
   status: DataStatus;
   refresh: () => Promise<void>;
   disclaimerAccepted: boolean;
@@ -38,6 +57,10 @@ interface AppState {
   saveCombo: (combo: Omit<SavedCombo, "targetDrawNo"> & { targetDrawNo?: number }) => void;
   removeSaved: (id: string) => void;
   togglePurchased: (id: string, purchased: boolean) => void;
+  savedPension: SavedPension[];
+  savePensionCombo: (combo: Omit<SavedPension, "targetDrawNo"> & { targetDrawNo?: number }) => void;
+  removeSavedPension: (id: string) => void;
+  togglePensionPurchased: (id: string, purchased: boolean) => void;
   alerts: AlertSettings;
   updateAlerts: (patch: Partial<AlertSettings>) => void;
   telegram: TelegramSettings;
@@ -55,11 +78,27 @@ function buildStatus(draws: Draw[], extra: Partial<DataStatus> = {}): DataStatus
     latestDrawNo: latest.drawNo,
     latestDate: latest.date,
     totalDraws: draws.length,
-    source: "동행복권 회차 결과 공개 데이터",
+    source: extra.source ?? "동행복권 회차 결과 공개 데이터",
     updatedAt: extra.updatedAt ?? new Date().toISOString(),
     refreshState: extra.refreshState ?? "idle",
     refreshMessage: extra.refreshMessage ?? `${latest.drawNo}회까지 반영됨`,
   };
+}
+
+function applyPensionComparisons(items: SavedPension[], draws: PensionDraw[]): SavedPension[] {
+  const byNo = new Map(draws.map((d) => [d.drawNo, d]));
+  return items.map((item) => {
+    const draw = byNo.get(item.targetDrawNo);
+    if (!draw || !validatePensionDraw(draw)) return item;
+    const result = comparePension(item.group, item.digits, draw);
+    return {
+      ...item,
+      comparedDrawNo: draw.drawNo,
+      suffixHits: result.suffixHits,
+      bonusHit: result.bonusHit,
+      rank: result.rank,
+    };
+  });
 }
 
 function applyComparisons(items: SavedCombo[], draws: Draw[]): SavedCombo[] {
@@ -97,10 +136,15 @@ async function dispatchPurchaseTelegram(nextDrawNo: number, saved: SavedCombo[])
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [view, setView] = useState<View>("home");
+  const [gameKind, setGameKindState] = useState<GameKind>(loadGameKind);
   const [draws, setDraws] = useState<Draw[]>(() => loadLocalDraws());
+  const [pensionDraws, setPensionDraws] = useState<PensionDraw[]>(() => loadLocalPensionDraws());
   const [status, setStatus] = useState<DataStatus>(() => buildStatus(loadLocalDraws()));
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(loadDisclaimerAccepted);
   const [saved, setSaved] = useState<SavedCombo[]>(() => applyComparisons(loadSaved(), loadLocalDraws()));
+  const [savedPension, setSavedPension] = useState<SavedPension[]>(() =>
+    applyPensionComparisons(loadSavedPension(), loadLocalPensionDraws()),
+  );
   const [alerts, setAlerts] = useState<AlertSettings>(loadAlerts);
   const [telegram, setTelegram] = useState<TelegramSettings>(loadTelegram);
   const [reminderBanner, setReminderBanner] = useState<string | null>(null);
@@ -118,6 +162,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     (async () => {
       setStatus((s) => ({ ...s, refreshState: "loading", refreshMessage: "최신 회차를 확인하는 중…" }));
       try {
+        const kind = loadGameKind();
+        if (kind === "pension") {
+          const { draws: next, added } = await refreshPensionDraws(loadLocalPensionDraws());
+          if (cancelled) return;
+          const checked = next.filter(validatePensionDraw);
+          const updated = applyPensionComparisons(loadSavedPension(), checked);
+          setPensionDraws(checked);
+          setSavedPension(updated);
+          saveSavedPension(updated);
+          const latest = latestPension(checked);
+          setStatus({
+            latestDrawNo: latest.drawNo,
+            latestDate: latest.date,
+            totalDraws: checked.length,
+            source: "동행복권 연금복권720+ 공개 결과",
+            updatedAt: new Date().toISOString(),
+            refreshState: "ok",
+            refreshMessage: added > 0 ? `${added}개 회차를 추가로 반영했습니다.` : "이미 최신 회차까지 반영되어 있습니다.",
+          });
+          return;
+        }
         const { draws: next, added } = await refreshDraws(loadLocalDraws());
         if (cancelled) return;
         const checked = next.filter(validateDraw);
@@ -169,9 +234,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
   }, [alerts, draws]);
 
+  const setGameKind = useCallback((kind: GameKind) => {
+    setGameKindState(kind);
+    saveGameKind(kind);
+    if (kind === "pension") {
+      const list = pensionDraws.filter(validatePensionDraw);
+      const latest = latestPension(list);
+      setStatus({
+        latestDrawNo: latest.drawNo,
+        latestDate: latest.date,
+        totalDraws: list.length,
+        source: "동행복권 연금복권720+ 공개 결과",
+        updatedAt: new Date().toISOString(),
+        refreshState: "idle",
+        refreshMessage: `${latest.drawNo}회까지 반영됨`,
+      });
+    } else {
+      setStatus(buildStatus(draws.filter(validateDraw)));
+    }
+  }, [draws, pensionDraws]);
+
   const refresh = useCallback(async () => {
     setStatus((s) => ({ ...s, refreshState: "loading", refreshMessage: "최신 회차를 확인하는 중…" }));
     try {
+      if (gameKind === "pension") {
+        const { draws: next, added } = await refreshPensionDraws(pensionDraws);
+        const checked = next.filter(validatePensionDraw);
+        const updated = applyPensionComparisons(loadSavedPension(), checked);
+        setPensionDraws(checked);
+        setSavedPension(updated);
+        saveSavedPension(updated);
+        const latest = latestPension(checked);
+        setStatus({
+          latestDrawNo: latest.drawNo,
+          latestDate: latest.date,
+          totalDraws: checked.length,
+          source: "동행복권 연금복권720+ 공개 결과",
+          updatedAt: new Date().toISOString(),
+          refreshState: "ok",
+          refreshMessage: added > 0 ? `${added}개 회차를 추가로 반영했습니다.` : "이미 최신 회차까지 반영되어 있습니다.",
+        });
+        return;
+      }
       const { draws: next, added } = await refreshDraws(draws);
       const checked = next.filter(validateDraw);
       const updated = applyComparisons(loadSaved(), checked);
@@ -195,7 +299,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refreshMessage: error instanceof Error ? error.message : "데이터 업데이트에 실패했습니다.",
       }));
     }
-  }, [draws]);
+  }, [draws, gameKind, pensionDraws]);
 
   const acceptDisclaimer = useCallback(() => {
     setDisclaimerAccepted(true);
@@ -240,6 +344,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const savePensionCombo = useCallback(
+    (combo: Omit<SavedPension, "targetDrawNo"> & { targetDrawNo?: number }) => {
+      setSavedPension((items) => {
+        if (items.some((x) => x.id === combo.id)) return items;
+        const next = applyPensionComparisons(
+          [
+            {
+              ...combo,
+              purchased: combo.purchased ?? false,
+              targetDrawNo: combo.targetDrawNo ?? latestPension(pensionDraws).drawNo + 1,
+            },
+            ...items,
+          ],
+          pensionDraws,
+        );
+        saveSavedPension(next);
+        return next;
+      });
+    },
+    [pensionDraws],
+  );
+
+  const removeSavedPension = useCallback((id: string) => {
+    setSavedPension((items) => {
+      const next = items.filter((x) => x.id !== id);
+      saveSavedPension(next);
+      return next;
+    });
+  }, []);
+
+  const togglePensionPurchased = useCallback((id: string, purchased: boolean) => {
+    setSavedPension((items) => {
+      const next = items.map((item) => (item.id === id ? { ...item, purchased } : item));
+      saveSavedPension(next);
+      return next;
+    });
+  }, []);
+
   const updateAlerts = useCallback((patch: Partial<AlertSettings>) => {
     setAlerts((current) => {
       const next = { ...current, ...patch };
@@ -262,6 +404,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     clearAllUserData();
     setDisclaimerAccepted(false);
     setSaved([]);
+    setSavedPension([]);
+    setGameKindState("lotto");
     setAlerts(loadAlerts());
     setTelegram(loadTelegram());
     setReminderBanner(null);
@@ -271,7 +415,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => ({
       view,
       setView,
+      gameKind,
+      setGameKind,
       draws,
+      pensionDraws,
       status,
       refresh,
       disclaimerAccepted,
@@ -280,6 +427,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveCombo,
       removeSaved,
       togglePurchased,
+      savedPension,
+      savePensionCombo,
+      removeSavedPension,
+      togglePensionPurchased,
       alerts,
       updateAlerts,
       telegram,
@@ -290,7 +441,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }),
     [
       view,
+      gameKind,
+      setGameKind,
       draws,
+      pensionDraws,
       status,
       refresh,
       disclaimerAccepted,
@@ -299,6 +453,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveCombo,
       removeSaved,
       togglePurchased,
+      savedPension,
+      savePensionCombo,
+      removeSavedPension,
+      togglePensionPurchased,
       alerts,
       updateAlerts,
       telegram,

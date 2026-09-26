@@ -10,6 +10,7 @@ fi
 
 install -m 644 "$ROOT/telegram-proxy.conf" /etc/nginx/snippets/telegram-proxy.conf
 install -m 644 "$ROOT/openai-proxy.conf" /etc/nginx/snippets/openai-proxy.conf
+install -m 644 "$ROOT/pension-proxy.conf" /etc/nginx/snippets/pension-proxy.conf
 
 python3 - <<'PY'
 from pathlib import Path
@@ -20,7 +21,7 @@ roots = [
     Path("/etc/nginx/sites-available"),
     Path("/etc/nginx/conf.d"),
 ]
-snippets = ["telegram-proxy.conf", "openai-proxy.conf"]
+snippets = ["telegram-proxy.conf", "openai-proxy.conf", "pension-proxy.conf"]
 updated = []
 for folder in roots:
     if not folder.is_dir():

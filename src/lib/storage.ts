@@ -1,4 +1,4 @@
-import type { AlertSettings, SavedCombo, TelegramSettings } from "../types";
+import type { AlertSettings, GameKind, PensionDraw, SavedCombo, SavedPension, TelegramSettings } from "../types";
 
 const KEYS = {
   disclaimer: "lottolab:disclaimer",
@@ -7,6 +7,9 @@ const KEYS = {
   extraDraws: "lottolab:extraDraws",
   telegram: "lottolab:telegram",
   openai: "lottolab:openai",
+  extraPension: "lottolab:extraPension",
+  savedPension: "lottolab:savedPension",
+  gameKind: "lottolab:gameKind",
 } as const;
 
 function read<T>(key: string, fallback: T): T {
@@ -86,6 +89,34 @@ export function loadExtraDraws() {
 
 export function saveExtraDraws(draws: import("../types").Draw[]): void {
   write(KEYS.extraDraws, draws);
+}
+
+export function loadGameKind(): GameKind {
+  const value = read<GameKind>(KEYS.gameKind, "lotto");
+  return value === "pension" ? "pension" : "lotto";
+}
+
+export function saveGameKind(kind: GameKind): void {
+  write(KEYS.gameKind, kind);
+}
+
+export function loadExtraPensionDraws(): PensionDraw[] {
+  return read<PensionDraw[]>(KEYS.extraPension, []);
+}
+
+export function saveExtraPensionDraws(draws: PensionDraw[]): void {
+  write(KEYS.extraPension, draws);
+}
+
+export function loadSavedPension(): SavedPension[] {
+  return read<SavedPension[]>(KEYS.savedPension, []).map((item) => ({
+    ...item,
+    purchased: Boolean(item.purchased),
+  }));
+}
+
+export function saveSavedPension(items: SavedPension[]): void {
+  write(KEYS.savedPension, items);
 }
 
 export function clearAllUserData(): void {

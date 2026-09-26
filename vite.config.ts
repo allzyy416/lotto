@@ -17,6 +17,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/oa-api/, ""),
       },
+      "/pt720-api": {
+        target: "https://www.dhlottery.co.kr",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/pt720-api/, ""),
+      },
     },
   },
 });
